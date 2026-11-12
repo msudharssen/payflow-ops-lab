@@ -1,0 +1,20 @@
+filebeat.inputs:
+  - type: filestream
+    id: payflow-app
+    paths:
+      - /var/log/payflow/app.log
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  index: "payflow-%{+yyyy.MM.dd}"
+
+setup.template.name: "payflow"
+setup.template.pattern: "payflow-*"
+setup.ilm.enabled: false
+
+logging.level: warning
