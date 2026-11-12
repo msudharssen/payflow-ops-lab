@@ -1,0 +1,78 @@
+{
+  "uid": "payflow-jvm",
+  "title": "JVM & Connection Pool",
+  "tags": ["payflow"],
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries", "title": "Heap Used vs Max",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "min": 0, "custom": { "fillOpacity": 15 } }, "overrides": [
+        { "matcher": { "id": "byName", "options": "max" }, "properties": [
+          { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } },
+          { "id": "custom.fillOpacity", "value": 0 },
+          { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } } ] }
+      ] },
+      "targets": [
+        { "expr": "sum(jvm_memory_used_bytes{job=\"payflow-app\",area=\"heap\"})", "legendFormat": "used", "refId": "A" },
+        { "expr": "sum(jvm_memory_max_bytes{job=\"payflow-app\",area=\"heap\"} > 0)", "legendFormat": "max", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "GC Pause Time (per second of wall clock)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "custom": { "fillOpacity": 20 } }, "overrides": [] },
+      "targets": [ { "expr": "sum by (action) (rate(jvm_gc_pause_seconds_sum{job=\"payflow-app\"}[5m]))", "legendFormat": "{{action}}", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Hikari Connections",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 15 } }, "overrides": [
+        { "matcher": { "id": "byName", "options": "pending" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] }
+      ] },
+      "targets": [
+        { "expr": "hikaricp_connections_active{job=\"payflow-app\"}", "legendFormat": "active", "refId": "A" },
+        { "expr": "hikaricp_connections_idle{job=\"payflow-app\"}", "legendFormat": "idle", "refId": "B" },
+        { "expr": "hikaricp_connections_pending{job=\"payflow-app\"}", "legendFormat": "pending", "refId": "C" },
+        { "expr": "hikaricp_connections_max{job=\"payflow-app\"}", "legendFormat": "max", "refId": "D" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Hikari Connection Timeouts & Acquire Time",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 10 } }, "overrides": [
+        { "matcher": { "id": "byName", "options": "acquire avg (s)" }, "properties": [ { "id": "unit", "value": "s" } ] }
+      ] },
+      "targets": [
+        { "expr": "rate(hikaricp_connections_timeout_total{job=\"payflow-app\"}[5m])", "legendFormat": "timeouts/s", "refId": "A" },
+        { "expr": "rate(hikaricp_connections_acquire_seconds_sum{job=\"payflow-app\"}[5m]) / rate(hikaricp_connections_acquire_seconds_count{job=\"payflow-app\"}[5m])", "legendFormat": "acquire avg (s)", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Live Threads",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "expr": "jvm_threads_live_threads{job=\"payflow-app\"}", "legendFormat": "live", "refId": "A" },
+        { "expr": "jvm_threads_daemon_threads{job=\"payflow-app\"}", "legendFormat": "daemon", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "CPU Usage",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "fillOpacity": 15 } }, "overrides": [] },
+      "targets": [
+        { "expr": "process_cpu_usage{job=\"payflow-app\"}", "legendFormat": "process", "refId": "A" },
+        { "expr": "system_cpu_usage{job=\"payflow-app\"}", "legendFormat": "system", "refId": "B" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "uid": "payflow-endpoints",
+  "title": "Endpoint Detail",
+  "tags": ["payflow"],
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries", "title": "p95 Latency by Endpoint",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5 } }, "overrides": [] },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"payflow-app\",uri=~\"/api/.*\"}[5m])))", "legendFormat": "{{uri}}", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Average Latency by Endpoint",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5 } }, "overrides": [] },
+      "targets": [ { "expr": "sum by (uri) (rate(http_server_requests_seconds_sum{job=\"payflow-app\",uri=~\"/api/.*\"}[5m])) / sum by (uri) (rate(http_server_requests_seconds_count{job=\"payflow-app\",uri=~\"/api/.*\"}[5m]))", "legendFormat": "{{uri}}", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Request Rate by Endpoint",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 15, "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "targets": [ { "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"payflow-app\",uri=~\"/api/.*\"}[1m]))", "legendFormat": "{{uri}}", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Errors by Endpoint and Status (4xx/5xx)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 15 } }, "overrides": [] },
+      "targets": [ { "expr": "sum by (uri, status) (rate(http_server_requests_seconds_count{job=\"payflow-app\",uri=~\"/api/.*\",status=~\"4..|5..\"}[2m]))", "legendFormat": "{{status}} {{uri}}", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Downstream: fraud-check Latency",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5 } }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(fraudcheck_latency_seconds_bucket{job=\"payflow-app\"}[5m])))", "legendFormat": "p95", "refId": "A" },
+        { "expr": "rate(fraudcheck_latency_seconds_sum{job=\"payflow-app\"}[5m]) / rate(fraudcheck_latency_seconds_count{job=\"payflow-app\"}[5m])", "legendFormat": "avg", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Downstream: fraud-check Call Rate",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 15 } }, "overrides": [] },
+      "targets": [ { "expr": "rate(fraudcheck_latency_seconds_count{job=\"payflow-app\"}[1m])", "legendFormat": "calls/s", "refId": "A" } ]
+    }
+  ]
+}

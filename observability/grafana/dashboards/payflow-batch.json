@@ -1,0 +1,78 @@
+{
+  "uid": "payflow-batch",
+  "title": "Batch & Business KPIs",
+  "tags": ["payflow"],
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat", "title": "Time Since Last Settlement Run",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 0,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 600 }, { "color": "red", "value": 900 } ] } }, "overrides": [] },
+      "options": { "colorMode": "background" },
+      "targets": [ { "expr": "time() - settlement_last_run_timestamp{job=\"payflow-app\"} > 0 or vector(0)", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "Skipped Records (last run)",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none",
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "options": { "colorMode": "background" },
+      "targets": [ { "expr": "settlement_skipped_records{job=\"payflow-app\"}", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "Payments Created (1h)",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }, "overrides": [] },
+      "options": { "graphMode": "area" },
+      "targets": [ { "expr": "increase(payments_created_total{job=\"payflow-app\"}[1h])", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "Payments Failed (1h)",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 0,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 200 } ] } }, "overrides": [] },
+      "options": { "graphMode": "area" },
+      "targets": [ { "expr": "sum(increase(payments_failed_total{job=\"payflow-app\"}[1h])) or vector(0)", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Settlement: Skipped Records Over Time",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 20 } }, "overrides": [] },
+      "targets": [ { "expr": "settlement_skipped_records{job=\"payflow-app\"}", "legendFormat": "skipped", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Settlement Run Age",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0, "custom": { "fillOpacity": 10 } },
+        "overrides": [] },
+      "targets": [ { "expr": "(time() - settlement_last_run_timestamp{job=\"payflow-app\"}) > 0 or vector(0)", "legendFormat": "seconds since last run", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Payments Created / Failed (per min)",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "min": 0, "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "expr": "60 * rate(payments_created_total{job=\"payflow-app\"}[5m])", "legendFormat": "created", "refId": "A" },
+        { "expr": "60 * sum by (reason) (rate(payments_failed_total{job=\"payflow-app\"}[5m]))", "legendFormat": "failed: {{reason}}", "refId": "B" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "fraud-check p95",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0, "custom": { "fillOpacity": 5 } }, "overrides": [] },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum by (le) (rate(fraudcheck_latency_seconds_bucket{job=\"payflow-app\"}[5m])))", "legendFormat": "p95", "refId": "A" } ]
+    }
+  ]
+}

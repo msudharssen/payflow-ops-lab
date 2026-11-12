@@ -1,0 +1,103 @@
+groups:
+  - name: payflow
+    rules:
+      - alert: HighErrorRate
+        expr: >
+          100 * sum(rate(http_server_requests_seconds_count{job="payflow-app",status=~"5.."}[2m]))
+          / sum(rate(http_server_requests_seconds_count{job="payflow-app"}[2m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          sn_priority: P2
+        annotations:
+          summary: "5xx rate is {{ $value | printf \"%.1f\" }}% (threshold 5%)"
+          dashboard: http://localhost:3000/d/payflow-overview
+
+      - alert: HighLatencyP95
+        expr: >
+          histogram_quantile(0.95, sum by (le)
+          (rate(http_server_requests_seconds_bucket{job="payflow-app",uri=~"/api/.*"}[5m]))) > 2
+        for: 5m
+        labels:
+          severity: warning
+          sn_priority: P3
+        annotations:
+          summary: "API p95 latency is {{ $value | printf \"%.2f\" }}s (threshold 2s)"
+          dashboard: http://localhost:3000/d/payflow-endpoints
+
+      - alert: DBPoolExhausted
+        expr: hikaricp_connections_pending{job="payflow-app"} > 0
+        for: 2m
+        labels:
+          severity: critical
+          sn_priority: P2
+        annotations:
+          summary: "{{ $value }} threads waiting for a DB connection"
+          dashboard: http://localhost:3000/d/payflow-jvm
+
+      - alert: HeapHigh
+        expr: >
+          sum(jvm_memory_used_bytes{job="payflow-app",area="heap"})
+          / sum(jvm_memory_max_bytes{job="payflow-app",area="heap"} > 0) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          sn_priority: P3
+        annotations:
+          summary: "Heap usage above 85% for 5 minutes"
+          dashboard: http://localhost:3000/d/payflow-jvm
+
+      - alert: AppDown
+        expr: up{job="payflow-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          sn_priority: P1
+        annotations:
+          summary: "payflow-app health check failing"
+          dashboard: http://localhost:3000/d/payflow-overview
+
+      - alert: SettlementStale
+        expr: >
+          settlement_last_run_timestamp{job="payflow-app"} > 0
+          and (time() - settlement_last_run_timestamp{job="payflow-app"}) > 900
+        for: 1m
+        labels:
+          severity: warning
+          sn_priority: P3
+        annotations:
+          summary: "No successful settlement run in the last 15 minutes"
+          dashboard: http://localhost:3000/d/payflow-batch
+
+      - alert: SettlementSkips
+        expr: settlement_skipped_records{job="payflow-app"} > 0
+        labels:
+          severity: warning
+          sn_priority: P4
+        annotations:
+          summary: "Last settlement run skipped {{ $value }} records"
+          dashboard: http://localhost:3000/d/payflow-batch
+
+      # payflow_log_volume_* metrics arrive with the disk-full scenario (M5+)
+      - alert: LogVolumeFilling
+        expr: >
+          payflow_log_volume_used_bytes{job="payflow-app"}
+          / payflow_log_volume_capacity_bytes{job="payflow-app"} > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          sn_priority: P3
+        annotations:
+          summary: "Log volume above 80% full"
+
+      - alert: FraudCheckSlow
+        expr: >
+          histogram_quantile(0.95, sum by (le)
+          (rate(fraudcheck_latency_seconds_bucket{job="payflow-app"}[3m]))) > 1.5
+        for: 3m
+        labels:
+          severity: warning
+          sn_priority: P3
+        annotations:
+          summary: "fraud-check downstream p95 is {{ $value | printf \"%.2f\" }}s (threshold 1.5s)"
+          dashboard: http://localhost:3000/d/payflow-endpoints

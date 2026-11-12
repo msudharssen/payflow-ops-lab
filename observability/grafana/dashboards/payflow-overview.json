@@ -1,0 +1,96 @@
+{
+  "uid": "payflow-overview",
+  "title": "PayFlow Overview",
+  "tags": ["payflow"],
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "type": "stat", "title": "App Health",
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {
+        "mappings": [
+          { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } }
+        ],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+      }, "overrides": [] },
+      "options": { "colorMode": "background", "graphMode": "none" },
+      "targets": [ { "expr": "up{job=\"payflow-app\"}", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "Requests / s",
+      "gridPos": { "h": 5, "w": 5, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 1,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }, "overrides": [] },
+      "options": { "graphMode": "area" },
+      "targets": [ { "expr": "sum(rate(http_server_requests_seconds_count{job=\"payflow-app\",uri=~\"/api/.*\"}[1m]))", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "Error Rate (5m)",
+      "gridPos": { "h": 5, "w": 5, "x": 9, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "targets": [ { "expr": "100 * (sum(rate(http_server_requests_seconds_count{job=\"payflow-app\",status=~\"5..\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{job=\"payflow-app\"}[5m]))", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "API p95 (5m)",
+      "gridPos": { "h": 5, "w": 5, "x": 14, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 2,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 2 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"payflow-app\",uri=~\"/api/.*\"}[5m])))", "refId": "A" } ]
+    },
+    {
+      "type": "stat", "title": "Payments / min",
+      "gridPos": { "h": 5, "w": 5, "x": 19, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 1,
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }, "overrides": [] },
+      "options": { "graphMode": "area" },
+      "targets": [ { "expr": "60 * rate(payments_created_total{job=\"payflow-app\"}[5m])", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Request Rate by Status",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "stacking": { "mode": "normal" } } }, "overrides": [
+        { "matcher": { "id": "byRegexp", "options": "5.." }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] }
+      ] },
+      "targets": [ { "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"payflow-app\",uri=~\"/api/.*\"}[1m]))", "legendFormat": "{{status}}", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "API Latency p50 / p95 / p99",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5 } }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"payflow-app\",uri=~\"/api/.*\"}[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"payflow-app\",uri=~\"/api/.*\"}[5m])))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"payflow-app\",uri=~\"/api/.*\"}[5m])))", "legendFormat": "p99", "refId": "C" }
+      ]
+    },
+    {
+      "type": "timeseries", "title": "5xx Error Rate",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "custom": { "fillOpacity": 20 } }, "overrides": [] },
+      "targets": [ { "expr": "100 * (sum(rate(http_server_requests_seconds_count{job=\"payflow-app\",status=~\"5..\"}[2m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{job=\"payflow-app\"}[2m]))", "legendFormat": "5xx %", "refId": "A" } ]
+    },
+    {
+      "type": "timeseries", "title": "Payments Created vs Failed (per min)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "none", "custom": { "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "expr": "60 * rate(payments_created_total{job=\"payflow-app\"}[5m])", "legendFormat": "created", "refId": "A" },
+        { "expr": "60 * sum by (reason) (rate(payments_failed_total{job=\"payflow-app\"}[5m]))", "legendFormat": "failed: {{reason}}", "refId": "B" }
+      ]
+    }
+  ]
+}

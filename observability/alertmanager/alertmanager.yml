@@ -1,0 +1,14 @@
+route:
+  receiver: incident-bridge
+  group_by: [alertname]
+  group_wait: 15s
+  group_interval: 1m
+  repeat_interval: 4h
+
+receivers:
+  # No integrations yet: alerts are visible in the Alertmanager UI (:9093)
+  # but go nowhere. M4 adds the webhook to the incident-bridge service:
+  #   webhook_configs:
+  #     - url: http://incident-bridge:8090/alertmanager
+  #       send_resolved: true
+  - name: incident-bridge
