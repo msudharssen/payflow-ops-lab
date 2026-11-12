@@ -1,0 +1,70 @@
+services:
+  oracle-free:
+    image: gvenzl/oracle-free:23-slim
+    container_name: oracle-free
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PWD}
+      PAYFLOW_DB_PASSWORD: ${PAYFLOW_DB_PASSWORD}
+      SUPPORT_RO_PASSWORD: ${SUPPORT_RO_PASSWORD}
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./db/init:/container-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
+
+  fraud-check:
+    image: wiremock/wiremock:3.9.1
+    container_name: fraud-check
+    command: ["--global-response-templating"]
+    volumes:
+      - ./fraud-check/mappings:/home/wiremock/mappings:ro
+    ports:
+      - "8081:8080"
+
+  payflow-app:
+    build: ./app
+    container_name: payflow-app
+    environment:
+      DB_URL: jdbc:oracle:thin:@//oracle-free:1521/FREEPDB1
+      DB_USER: PAYFLOW
+      DB_PASSWORD: ${PAYFLOW_DB_PASSWORD}
+      FRAUD_CHECK_URL: http://fraud-check:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - payflow-logs:/var/log/payflow
+    depends_on:
+      oracle-free:
+        condition: service_healthy
+      fraud-check:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  traffic-gen:
+    image: grafana/k6:0.57.0
+    container_name: traffic-gen
+    command: ["run", "/scripts/traffic.js"]
+    environment:
+      BASE_URL: http://payflow-app:8080
+    volumes:
+      - ./traffic:/scripts:ro
+    depends_on:
+      payflow-app:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  oracle-data:
+  payflow-logs:

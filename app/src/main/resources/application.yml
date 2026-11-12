@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: payflow-app
+  datasource:
+    url: ${DB_URL:jdbc:oracle:thin:@//localhost:1521/FREEPDB1}
+    username: ${DB_USER:PAYFLOW}
+    password: ${DB_PASSWORD:Payflow_Lab123}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+      # don't kill the app if the DB isn't up yet; health goes DOWN instead
+      initialization-fail-timeout: -1
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate.dialect: org.hibernate.dialect.OracleDialect
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+payflow:
+  fraud-check:
+    url: ${FRAUD_CHECK_URL:http://localhost:8081}
+    reject-threshold: 0.9
+  settlement:
+    # every 5 minutes, first run 2 minutes after startup
+    fixed-delay-ms: 300000
+    initial-delay-ms: 120000
+
+logging:
+  level:
+    com.payflow: INFO

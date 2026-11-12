@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/score"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "body": "{\"score\": {{randomDecimal lower=0.01 upper=0.99}} }",
+    "fixedDelayMilliseconds": 80
+  }
+}

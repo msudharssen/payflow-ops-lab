@@ -1,0 +1,5 @@
+.env
+app/target/
+*.log
+chaos/.last
+.DS_Store
